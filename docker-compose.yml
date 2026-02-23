@@ -1,16 +1,23 @@
 services:
+  redis:
+    image: redis:8.2.4-alpine
+    restart: unless-stopped
+
   rate-api:
     image: tripladev/rate-api
     ports:
-      - "8080:8080"
+      - '8080:8080'
 
   interview-dev:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - .:/rails
     environment:
       - RATE_API_URL=http://rate-api:8080
+      - REDIS_URL=redis://redis:6379/0
+
     depends_on:
       - rate-api
+      - redis
