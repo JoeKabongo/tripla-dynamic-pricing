@@ -22,11 +22,11 @@ module Api::V1
 
         if rate.success?
           parsed_rate = JSON.parse(rate.body)
-          parsed_rate['rates'].detect do |r|
-            r['period'] == @period && r['hotel'] == @hotel && r['room'] == @room
-          end&.dig('rate')
+          parsed_rate["rates"].detect do |r|
+            r["period"] == @period && r["hotel"] == @hotel && r["room"] == @room
+          end&.dig("rate")
         else
-          errors << rate.body['error']
+          errors << rate.body["error"]
           nil
         end
       end
