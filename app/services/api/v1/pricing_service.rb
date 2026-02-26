@@ -2,6 +2,8 @@ module Api::V1
   class PricingService < BaseService
     CACHE_EXPIRY = 5.minutes
     RACE_TTL = 10.seconds
+    NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Timeout::Error,
+                      SocketError, Errno::ECONNREFUSED, OpenSSL::SSL::SSLError].freeze
 
     def initialize(period:, hotel:, room:)
       @period = period
@@ -30,6 +32,14 @@ module Api::V1
           nil
         end
       end
+    rescue *NETWORK_ERRORS => e
+      Rails.logger.error("Network error: #{e.class} (#{e.message})")
+      errors << "Service is temporarily unavailable. Please try again later."
+      @result = nil
+    rescue StandardError => e
+      Rails.logger.error("Standard error: #{e.message}")
+      errors << "Something went wrong on our side. Please try again later."
+      @result = nil
     end
 
     private

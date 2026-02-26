@@ -111,4 +111,17 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
       end
     end
   end
+  test "handles pricing model timeout gracefully" do
+    RateApiClient.stub(:get_rate, ->(**_) { raise Net::ReadTimeout }) do
+      service = Api::V1::PricingService.new(
+        period: "Summer",
+        hotel: "FloatingPointResort",
+        room: "SingletonRoom"
+      )
+
+      service.run
+      assert_nil service.result
+      assert_includes service.errors.join(" "), "Service is temporarily unavailable. Please try again later."
+    end
+  end
 end
