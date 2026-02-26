@@ -1,57 +1,26 @@
-<div align="center">
-   <img src="/img/logo.svg?raw=true" width=600 style="background-color:white;">
-</div>
+# Tripla Dynamic Pricing Proxy
 
-# Backend Engineering Take-Home Assignment: Dynamic Pricing Proxy
+## Goal
 
-Welcome to the Tripla backend engineering take-home assignment\! 🧑‍💻 This exercise is designed to simulate a real-world problem you might encounter as part of our team.
+The upstream dynamic pricing model is computationally expensive. This service acts as a high-performance proxy designed to minimize API calls while maintaining data accuracy.
 
-⚠️ **Before you begin**, please review the main [FAQ](/README.md#frequently-asked-questions). It contains important information, **including our specific guidelines on how to submit your solution.**
+## Solution
 
-## The Challenge
+I implemented a centralized caching layer using Redis. This ensures that room rates are cached for the 5-minute validity window, protecting the Rate API from redundant requests.
 
-At Tripla, we use a dynamic pricing model for hotel rooms. Instead of static, unchanging rates, our model uses a real-time algorithm to adjust prices based on market demand and other data signals. This helps us maximize both revenue and occupancy.
+## Key design considerations
 
-Our Data and AI team built a powerful model to handle this, but its inference process is computationally expensive to run. To make this product more cost-effective, we analyzed the model's output and found that a calculated room rate remains effective for up to 5 minutes.
+### Cache Key Design
 
-This insight presents a great optimization opportunity, and that's where you come in.
+I implemented a granular key strategy using the combination of period, hotel, and room, including a versioning prefix for easy cache clearing if the data schema changes: "pricing:v1:#{@period}:#{@hotel}:#{@room}"
 
-## Your Mission
+### Cache Duration & Validity
 
-Your mission is to build an efficient service that acts as an intermediary to our dynamic pricing model. This service will be responsible for providing rates to our users while respecting the operational constraints of the expensive model behind it.
-
-You will start with a Ruby on Rails application that is already integrated with our dynamic pricing model. However, the current implementation fetches a new rate for every single request. Your mission is to ensure this service handles the pricing models' constraints.
-
-## Core Requirements
-
-1. Review the pricing model's API and its constraints. The model's docker image and documentation are hosted on dockerhub:  [tripladev/rate-api](https://hub.docker.com/r/tripladev/rate-api).
-
-2. Ensure rate validity. A rate fetched from the pricing model is considered valid for 5 minutes. Your service must ensure that any rate it provides for a given set of parameters (`period`, `hotel`, `room`) is no older than this 5-minute window.
-
-3. Honor throughput requirements. Your solution must be able to handle at least 10,000 requests per day from our users while using a single API token.
-
-## How We'll Evaluate Your Work
-
-This isn't just about getting the right answer. We're excited to see how you approach the problem. Treat this as you would a production-ready feature.
-
-  * We'll be looking for clean, well-structured, and testable code. Feel free to add dependencies or refactor the existing scaffold as you see fit.
-  * How do you decide on your approach to meeting the performance and cost requirements? Documenting your thought process is a great way to share this.
-  * A reliable service anticipates failure. How does your service behave if the pricing model is slow, or returns an error? Providing descriptive error messages to the end-user is a key part of a robust API.
-  * We want to see how you work around constraints and navigate an existing codebase to deliver a solution.
-
-
-## Minimum Deliverables
-
-1.  A link to your Git repository containing the complete solution.
-2.  Clear instructions in the `README.md` on how to build, test, and run your service.
-
-We highly value seeing your thought process. A great submission will also include documentation (e.g., in the `README.md`) discussing the design choices you made. Consider outlining different approaches you considered, their potential tradeoffs, and a clear rationale for why you chose your final solution.
-
-## Development Environment Setup
-
-The project scaffold is a minimal Ruby on Rails application with a `/api/v1/pricing` endpoint. While you're free to configure your environment as you wish, this repository is pre-configured for a Docker-based workflow that supports live reloading for your convenience.
-
-The provided `Dockerfile` builds a container with all necessary dependencies. Your local code is mounted directly into the container, so any changes you make on your machine will be reflected immediately. Your application will need to communicate with the external pricing model, which also runs in its own Docker container.
+- Expires In: 5 minutes (matching the business constraint for rate validity).
+- Race Condition TTL: Set to 10 seconds. This allows the system to serve "stale" data for a very brief window while one process fetches the fresh rate. This prevents a "Cache Stampede" (Thundering Herd) where multiple concurrent requests overload the model during a cache miss.
+- Why this over Distributed Locks?
+  ** one
+  ** two
 
 ### Quick Start Guide
 
@@ -77,6 +46,5 @@ docker compose exec interview-dev ./bin/rails test test/controllers/pricing_cont
 # Run a specific test by name
 docker compose exec interview-dev ./bin/rails test test/controllers/pricing_controller_test.rb -n test_should_get_pricing_with_all_parameters
 ```
-
 
 Good luck, and we look forward to seeing what you build\!
