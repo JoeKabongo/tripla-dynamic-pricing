@@ -38,7 +38,7 @@ module Api::V1
           matched_rate
 
         else
-          @error_status = rate.code >= 500 || rate.code == 429 ? :service_unavailable : :bad_request
+          @error_status = map_upstream_status(rate.code)
           errors << rate.body["error"]
           nil
         end
@@ -59,6 +59,17 @@ module Api::V1
 
     def create_cache_key
       "pricing:v1:#{@period}:#{@hotel}:#{@room}"
+    end
+
+    def map_upstream_status(code)
+      case code
+      when 429
+        :too_many_requests
+      when 500..599
+        :service_unavailable
+      else
+        :bad_request
+      end
     end
   end
 end

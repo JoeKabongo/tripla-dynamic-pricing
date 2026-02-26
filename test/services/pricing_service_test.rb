@@ -78,13 +78,13 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
       mock_response
     }) do
       service = Api::V1::PricingService.new(period: "Summer", hotel: "Invalid", room: "None")
-
       service.run
       assert_nil service.result
       assert_equal :not_found, service.error_status
       assert_includes service.errors.join(" "), "No rate found for the selected period, hotel, and room combination."
       assert_equal 1, call_count
 
+      service = Api::V1::PricingService.new(period: "Summer", hotel: "Invalid", room: "None")
       service.run
       assert_nil service.result
       assert_equal :not_found, service.error_status
@@ -128,6 +128,35 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
       assert_nil service.result
       assert_equal :service_unavailable, service.error_status
       assert_includes service.errors.join(" "), "Service is temporarily unavailable. Please try again later."
+    end
+  end
+
+  test "maps upstream HTTP status codes correctly" do
+    # 429 → too_many_requests
+    mock_response_429 = OpenStruct.new(success?: false, body: { "error" => "Rate limited" }, code: 429)
+
+    RateApiClient.stub(:get_rate, mock_response_429) do
+      service = Api::V1::PricingService.new(period: "Summer", hotel: "Resort", room: "Single")
+      service.run
+      assert_equal :too_many_requests, service.error_status
+    end
+
+    # 500 → service_unavailable
+    mock_response_500 = OpenStruct.new(success?: false, body: { "error" => "Internal error" }, code: 500)
+
+    RateApiClient.stub(:get_rate, mock_response_500) do
+      service = Api::V1::PricingService.new(period: "Summer", hotel: "Resort", room: "Single")
+      service.run
+      assert_equal :service_unavailable, service.error_status
+    end
+
+    # 400 → bad_request
+    mock_response_400 = OpenStruct.new(success?: false, body: { "error" => "Bad input" }, code: 400)
+
+    RateApiClient.stub(:get_rate, mock_response_400) do
+      service = Api::V1::PricingService.new(period: "Summer", hotel: "Resort", room: "Single")
+      service.run
+      assert_equal :bad_request, service.error_status
     end
   end
 end
