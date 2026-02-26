@@ -63,22 +63,25 @@ As part of my standard development workflow, I utilized Gemini (Google's LLM) to
 Here is a list of common commands for building, running, and interacting with the Dockerized environment.
 
 ```bash
-
-# --- 1. Build & Run The Main Application ---
-# Build and run the Docker compose
+# --- 1. Build & Run The Application ---
 docker compose up -d --build
 
 # --- 2. Test The Endpoint ---
-# Send a sample request to your running service
-curl 'http://localhost:3000/api/v1/pricing?period=Summer&hotel=FloatingPointResort&room=SingletonRoom'
+curl "http://localhost:3000/api/v1/pricing?period=Summer&hotel=FloatingPointResort&room=SingletonRoom"
 
 # --- 3. Run Tests ---
-# Run the full test suite
 docker compose exec interview-dev ./bin/rails test
 
-# Run a specific test file
-docker compose exec interview-dev ./bin/rails test test/controllers/pricing_controller_test.rb
+# --- 4. Inspect Redis Cache ---
+docker compose exec redis redis-cli keys "pricing:*"
 
-# Run a specific test by name
-docker compose exec interview-dev ./bin/rails test test/controllers/pricing_controller_test.rb -n test_should_get_pricing_with_all_parameters
+# --- 5. Observe Caching Behavior ---
+# First request triggers upstream API call
+curl -o /dev/null -s -w "Total time: %{time_total}s\n" \
+"http://localhost:3000/api/v1/pricing?period=Summer&hotel=FloatingPointResort&room=SingletonRoom"
+
+# Second request should be significantly faster (served from Redis); no call to Rate Api
+curl -o /dev/null -s -w "Total time: %{time_total}s\n" \
+"http://localhost:3000/api/v1/pricing?period=Summer&hotel=FloatingPointResort&room=SingletonRoom"
+
 ```
