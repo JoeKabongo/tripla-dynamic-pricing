@@ -24,20 +24,33 @@ module Api::V1
 
         if rate.success?
           parsed_rate = JSON.parse(rate.body)
-          parsed_rate["rates"].detect do |r|
+
+          matched_rate = parsed_rate["rates"].detect do |r|
             r["period"] == @period && r["hotel"] == @hotel && r["room"] == @room
           end&.dig("rate")
+
+          if matched_rate.nil?
+            @error_status = :not_found
+            errors << "No rate found for the selected period, hotel, and room combination."
+            nil
+          end
+
+          matched_rate
+
         else
+          @error_status = rate.code >= 500 || rate.code == 429 ? :service_unavailable : :bad_request
           errors << rate.body["error"]
           nil
         end
       end
     rescue *NETWORK_ERRORS => e
       Rails.logger.error("Network error: #{e.class} (#{e.message})")
+      @error_status = :service_unavailable
       errors << "Service is temporarily unavailable. Please try again later."
       @result = nil
     rescue StandardError => e
       Rails.logger.error("Standard error: #{e.message}")
+      @error_status = :internal_server_error
       errors << "Something went wrong on our side. Please try again later."
       @result = nil
     end

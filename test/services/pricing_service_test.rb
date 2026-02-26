@@ -81,10 +81,14 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
 
       service.run
       assert_nil service.result
+      assert_equal :not_found, service.error_status
+      assert_includes service.errors.join(" "), "No rate found for the selected period, hotel, and room combination."
       assert_equal 1, call_count
 
       service.run
       assert_nil service.result
+      assert_equal :not_found, service.error_status
+      assert_includes service.errors.join(" "), "No rate found for the selected period, hotel, and room combination."
       assert_equal 2, call_count
     end
   end
@@ -111,6 +115,7 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
       end
     end
   end
+
   test "handles pricing model timeout gracefully" do
     RateApiClient.stub(:get_rate, ->(**_) { raise Net::ReadTimeout }) do
       service = Api::V1::PricingService.new(
@@ -121,6 +126,7 @@ class Api::V1::PricingServiceTest < ActiveSupport::TestCase
 
       service.run
       assert_nil service.result
+      assert_equal :service_unavailable, service.error_status
       assert_includes service.errors.join(" "), "Service is temporarily unavailable. Please try again later."
     end
   end
