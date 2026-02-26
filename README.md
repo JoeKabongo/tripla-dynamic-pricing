@@ -2,7 +2,7 @@
 
 ## Goal
 
-The upstream dynamic pricing model is computationally expensive. This service introduces a caching layer to reduce redundant calls while maintaining rate validity.
+The [upstream dynamic pricing model](https://hub.docker.com/r/tripladev/rate-api) is computationally expensive. This service introduces a caching layer to reduce redundant calls while maintaining rate validity.
 
 ## Solution
 
